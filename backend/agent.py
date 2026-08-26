@@ -196,6 +196,9 @@ If any of these are missing, continue collecting them.
 - If you do not know something, say:
 "I don’t have that information. I can help you with service booking."
 
+## CALL TERMINATION RULES
+- If the caller says goodbye, asks to disconnect, or says phrases like "bye", "goodbye", "end call", "cut call", "ಧನ್ಯವಾದಗಳು ಬೈ", "ಸಾಕು ಬೈ", "ಸರಿ ಬೈ", reply with a brief friendly goodbye: "ಧನ್ಯವಾದಗಳು! ಶುಭ ದಿನ." and stop the call.
+
 ## CONVERSATION FLOW
 1. Greet the caller
 2. Ask the reason for the call
@@ -252,6 +255,25 @@ async def entrypoint(ctx: JobContext):
             }
         )
     )
+
+    @session.on("user_speech_committed")
+    def on_user_speech(msg):
+        text = getattr(msg, "content", "") or ""
+        if not isinstance(text, str):
+            text = str(text)
+        text_lower = text.lower()
+        goodbye_words = ["bye", "goodbye", "disconnect", "cut call", "end call", "ಬೈ", "ಸಾಕು ಬೈ", "ಧನ್ಯವಾದಗಳು ಬೈ", "ಸರಿ ಬೈ"]
+        if any(w in text_lower for w in goodbye_words):
+            logger.info(f"Detected goodbye in user transcript: '{text}'. Hanging up call after speech...")
+            async def auto_hangup():
+                await asyncio.sleep(3.5)
+                try:
+                    await ctx.room.disconnect()
+                    logger.info(f"Room '{ctx.room.name}' disconnected automatically after user goodbye.")
+                except Exception as e:
+                    logger.warning(f"Failed to auto-disconnect room: {e}")
+            asyncio.create_task(auto_hangup())
+
     await session.start(
         agent=VoiceAgent(voice=voice, agent_name=agent_name),
         room=ctx.room
