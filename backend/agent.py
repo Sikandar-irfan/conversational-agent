@@ -161,13 +161,17 @@ Before final confirmation, collect these details one by one in Kannada:
                 flush_signal=True
             ),
             llm=llm_instance,
-            tts=RoseLiveKitTTS(voice_pack_path=str(target_pack), language="kn")
+            tts=RoseLiveKitTTS(voice_pack_path=str(target_pack), language="kn"),
+            tools=[EndCallTool()]
         )
 
 async def graceful_end(session, room, api):
     await session.say("Thanks for your time. Have a great day.")
     await session.aclose()
-    await api.room.delete_room(room.name)
+    try:
+        await api.room.delete_room(room.name)
+    except Exception:
+        pass
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
@@ -204,6 +208,23 @@ async def entrypoint(ctx: JobContext):
         )
     )
 
+    def handle_user_text(text: str):
+        text_lower = text.lower()
+        goodbye_words = ["bye", "goodbye", "disconnect", "cut call", "end call", "ಬೈ", "ಸಾಕು", "ಧನ್ಯವಾದಗಳು ಬೈ", "ಸರಿ ಬೈ", "ಆಯ್ತು ಬೈ", "stop"]
+        if any(w in text_lower for w in goodbye_words):
+            logger.info(f"Detected goodbye in user transcript ('{text}'). Closing room immediately...")
+            async def close_call():
+                await asyncio.sleep(1.0)
+                try:
+                    await session.aclose()
+                except Exception:
+                    pass
+                try:
+                    await ctx.room.disconnect()
+                except Exception:
+                    pass
+            asyncio.create_task(close_call())
+
     @session.on("user_speech_committed")
     def on_user_speech(msg):
         text = ""
@@ -217,6 +238,12 @@ async def entrypoint(ctx: JobContext):
             text = str(msg.content)
         else:
             text = str(msg)
+        handle_user_text(text)
+
+    @session.on("user_transcript")
+    def on_user_transcript(msg):
+        text = getattr(msg, "transcript", str(msg))
+        handle_user_text(text)
 
         text_lower = text.lower()
         goodbye_words = ["bye", "goodbye", "disconnect", "cut call", "end call", "ಬೈ", "ಸಾಕು ಬೈ", "ಧನ್ಯವಾದಗಳು ಬೈ", "ಸರಿ ಬೈ", "ಆಯ್ತು ಬೈ"]
