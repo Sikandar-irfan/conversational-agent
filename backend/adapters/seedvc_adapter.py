@@ -360,7 +360,7 @@ class SeedVCAdapter(BaseAdapter):
                         json.dump(opt_data, f, indent=2)
                     logger.info(f"Self-improving feedback loop: optimized parameters cached at {opt_file}")
             except Exception as sim_e:
-                logger.warning(f"Could not compute Seed-VC similarity / optimization: {sim_e}")
+                logger.debug(f"Could not compute Seed-VC similarity / optimization: {sim_e}")
                 
         return {
             "audio_path": str(out_wav_path),
