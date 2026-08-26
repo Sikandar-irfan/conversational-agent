@@ -89,6 +89,17 @@ class VoiceAgent(Agent):
         else:
             raise ValueError("Neither GROQ_API_KEY nor OPENROUTER_API_KEY found in environment variables!")
 
+        # Select dynamic voice pack based on persona selected on UI
+        if voice.lower() in ["kavya", "simran", "asika", "asika_multi"]:
+            target_pack = BASE_DIR / "voice_packs" / "asika_multi.vc"
+        else:
+            target_pack = BASE_DIR / "voice_packs" / "bandhana_voice.vc"
+
+        if not target_pack.exists():
+            target_pack = VOICE_PACK_PATH
+
+        logger.info(f"Using voice pack for persona '{agent_name}': {target_pack.name}")
+
         super().__init__(
             instructions=f"""You are {agent_name}, a warm and efficient receptionist at "Sri Motors" — a trusted automotive service station in Bangalore.
 
@@ -199,7 +210,7 @@ If any of these are missing, continue collecting them.
                 flush_signal=True
             ),
             llm=llm_instance,
-            tts=RoseLiveKitTTS(voice_pack_path=str(VOICE_PACK_PATH), language="kn")
+            tts=RoseLiveKitTTS(voice_pack_path=str(target_pack), language="kn")
         )
 
 async def graceful_end(session, room, api):

@@ -1,0 +1,11 @@
+{
+  "pitch_mean": 191.47295815055207,
+  "pitch_variance": 454.3893195839551,
+  "pitch_range": 187.2943638765884,
+  "pitch_min": 71.32617550580554,
+  "pitch_max": 258.62053938239393,
+  "speaking_rate": 2.403836121811057,
+  "energy_mean": 0.06449346989393234,
+  "energy_variance": 0.0011950386688113213,
+  "duration_seconds": 29.952125
+}

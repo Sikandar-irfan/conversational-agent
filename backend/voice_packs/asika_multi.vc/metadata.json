@@ -1,0 +1,30 @@
+{
+  "version": "3.0",
+  "voice_name": "asika_multi",
+  "speaker_embedding_type": "ECAPA-TDNN",
+  "style_embedding_type": "WavLM-Stats",
+  "ssl_model": "WavLM-Base",
+  "campplus_embedding_type": "CAMPPlus",
+  "sample_rate": 16000,
+  "languages": [
+    "en",
+    "hi",
+    "es",
+    "fr",
+    "de",
+    "it",
+    "pt",
+    "pl",
+    "tr",
+    "ru",
+    "nl",
+    "cs",
+    "ar",
+    "zh-cn",
+    "hu",
+    "ko",
+    "ja",
+    "ta",
+    "kn"
+  ]
+}
