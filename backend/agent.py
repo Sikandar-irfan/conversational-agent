@@ -75,7 +75,7 @@ class VoiceAgent(Agent):
         openrouter_key = os.getenv("OPENROUTER_API_KEY")
 
         if groq_api_key:
-            model_name = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
+            model_name = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
             llm_instance = openai.LLM(
                 model=model_name,
                 api_key=groq_api_key,
