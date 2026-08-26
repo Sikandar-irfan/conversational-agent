@@ -233,11 +233,27 @@ class SeedVCAdapter(BaseAdapter):
         sound.export(tmp_wav_path, format="wav")
         Path(tmp_mp3_path).unlink(missing_ok=True)
         
-        # 2. Convert voice using Seed-VC (with base neural voice fallback if seed_vc is not installed)
+        # 2. Convert voice using Seed-VC (auto-installs seed_vc if missing)
         out_wav_path = output_dir / f"converted_{self.voice_name}_{language}_{int(time.time())}.wav"
         
         try:
-            from seed_vc.api import inference, AudioData, get_audio_numpy
+            try:
+                from seed_vc.api import inference, AudioData, get_audio_numpy
+            except (ImportError, ModuleNotFoundError):
+                logger.info("seed_vc module not found. Attempting automatic installation via pip/uv...")
+                import subprocess
+                if sys.platform == "win32":
+                    subprocess.run(
+                        [sys.executable, "-m", "pip", "install", "webrtcvad-wheels"],
+                        check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                    )
+                subprocess.run(
+                    [sys.executable, "-m", "pip", "install", "seed-vc", "--no-deps"],
+                    check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                )
+                from seed_vc.api import inference, AudioData, get_audio_numpy
+                logger.success("Successfully auto-installed and imported seed_vc module!")
+
             logger.info(f"SeedVCAdapter converting base voice using Flow-Matching to match {self.voice_name}...")
             
             src_np, src_sr = self._load_audio_numpy(tmp_wav_path, target_sr=22050)
@@ -297,16 +313,9 @@ class SeedVCAdapter(BaseAdapter):
                 sf.write(str(out_wav_path), audio_np, audio_sr)
             else:
                 raise RuntimeError("Seed-VC inference returned None")
-        except (ImportError, ModuleNotFoundError) as seedvc_missing:
-            logger.warning(
-                f"seed_vc package not installed ({seedvc_missing}). "
-                f"Using pitch-aligned Microsoft Neural base voice."
-            )
-            import shutil
-            shutil.copy(tmp_wav_path, str(out_wav_path))
         except Exception as seedvc_err:
             logger.warning(
-                f"Seed-VC voice conversion skipped ({seedvc_err}). "
+                f"Seed-VC voice conversion skipped or auto-install failed ({seedvc_err}). "
                 f"Using pitch-aligned Microsoft Neural base voice."
             )
             import shutil
