@@ -128,20 +128,27 @@ class RoseTTSStream(BaseChunkedStream):
                         stream=False,
                     )
 
-        for i in range(0, len(data), chunk_samples):
-            chunk = data[i : i + chunk_samples]
-            if output_emitter is not None:
-                if hasattr(output_emitter, "push"):
-                    output_emitter.push(chunk.tobytes())
-            elif hasattr(tts, "AudioFrame"):
-                frame = tts.AudioFrame(
-                    data=chunk.tobytes(),
-                    sample_rate=sr,
-                    num_channels=1,
-                    samples_per_channel=len(chunk)
-                )
-                if hasattr(self, "_event_ch"):
-                    if hasattr(tts, "SynthesizeEvent"):
-                        self._event_ch.send_nowait(tts.SynthesizeEvent(frame=frame))
-                    elif hasattr(tts, "SynthesizedAudio"):
-                        self._event_ch.send_nowait(tts.SynthesizedAudio(frame=frame, request_id=""))
+        try:
+            for i in range(0, len(data), chunk_samples):
+                chunk = data[i : i + chunk_samples]
+                if output_emitter is not None:
+                    if hasattr(output_emitter, "push"):
+                        output_emitter.push(chunk.tobytes())
+                elif hasattr(tts, "AudioFrame"):
+                    frame = tts.AudioFrame(
+                        data=chunk.tobytes(),
+                        sample_rate=sr,
+                        num_channels=1,
+                        samples_per_channel=len(chunk)
+                    )
+                    if hasattr(self, "_event_ch") and self._event_ch:
+                        if hasattr(tts, "SynthesizeEvent"):
+                            self._event_ch.send_nowait(tts.SynthesizeEvent(frame=frame))
+                        elif hasattr(tts, "SynthesizedAudio"):
+                            self._event_ch.send_nowait(tts.SynthesizedAudio(frame=frame, request_id=""))
+        finally:
+            if hasattr(self, "_event_ch") and self._event_ch and hasattr(self._event_ch, "close"):
+                try:
+                    self._event_ch.close()
+                except Exception:
+                    pass

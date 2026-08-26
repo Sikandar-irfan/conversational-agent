@@ -89,25 +89,36 @@ class RoseTTSStream(tts.ChunkedStream):
         self.language = language
 
     async def _run(self) -> None:
-        loop = asyncio.get_event_loop()
-        res = await loop.run_in_executor(
-            None,
-            lambda: self.adapter.synthesize(text=self.text, language=self.language)
-        )
-        
-        wav_path = res["audio_path"]
-        data, sr = sf.read(wav_path, dtype="int16")
-        
-        chunk_size = 2205 # 100ms audio chunks
-        for i in range(0, len(data), chunk_size):
-            chunk = data[i:i + chunk_size]
-            frame = tts.AudioFrame(
-                data=chunk.tobytes(),
-                sample_rate=sr,
-                num_channels=1,
-                samples_per_channel=len(chunk)
+        try:
+            loop = asyncio.get_event_loop()
+            res = await loop.run_in_executor(
+                None,
+                lambda: self.adapter.synthesize(text=self.text, language=self.language)
             )
-            self._event_ch.send_nowait(tts.SynthesizeEvent(frame=frame))
+            
+            wav_path = res["audio_path"]
+            data, sr = sf.read(wav_path, dtype="int16")
+            
+            chunk_size = 2205 # 100ms audio chunks
+            for i in range(0, len(data), chunk_size):
+                chunk = data[i:i + chunk_size]
+                frame = tts.AudioFrame(
+                    data=chunk.tobytes(),
+                    sample_rate=sr,
+                    num_channels=1,
+                    samples_per_channel=len(chunk)
+                )
+                if hasattr(self, "_event_ch") and self._event_ch:
+                    if hasattr(tts, "SynthesizeEvent"):
+                        self._event_ch.send_nowait(tts.SynthesizeEvent(frame=frame))
+                    elif hasattr(tts, "SynthesizedAudio"):
+                        self._event_ch.send_nowait(tts.SynthesizedAudio(frame=frame, request_id=""))
+        finally:
+            if hasattr(self, "_event_ch") and self._event_ch and hasattr(self._event_ch, "close"):
+                try:
+                    self._event_ch.close()
+                except Exception:
+                    pass
 
 
 # ── Voice Agent ───────────────────────────────────────────────────────────────
@@ -280,11 +291,6 @@ async def entrypoint(ctx: JobContext):
                 "mode": "fixed",
                 "min_delay": 0.5,
                 "max_delay": 3.0,
-            },
-            interruption={
-                "mode": "adaptive",
-                "min_duration": 0.5,
-                "resume_false_interruption": True,
             },
             preemptive_generation={
                 "preemptive_tts": True,
