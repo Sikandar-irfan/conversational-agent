@@ -1,6 +1,31 @@
+const fs = require("fs");
 const path = require("path");
-require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
-require("dotenv").config({ path: path.resolve(__dirname, ".env") });
+
+// Zero-dependency .env loader
+function loadEnv(filePath) {
+    if (fs.existsSync(filePath)) {
+        try {
+            const content = fs.readFileSync(filePath, "utf-8");
+            for (const line of content.split(/\r?\n/)) {
+                const trimmed = line.trim();
+                if (trimmed && !trimmed.startsWith("#") && trimmed.includes("=")) {
+                    const [key, ...valParts] = trimmed.split("=");
+                    const k = key.trim();
+                    const v = valParts.join("=").trim().replace(/^["']|["']$/g, '');
+                    if (!process.env[k]) {
+                        process.env[k] = v;
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn("Could not read .env file:", e.message);
+        }
+    }
+}
+
+loadEnv(path.resolve(__dirname, "../.env"));
+loadEnv(path.resolve(__dirname, ".env"));
+
 const express = require("express");
 const { AccessToken } = require("livekit-server-sdk");
 
