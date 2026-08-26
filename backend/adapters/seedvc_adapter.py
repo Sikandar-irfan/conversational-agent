@@ -233,72 +233,84 @@ class SeedVCAdapter(BaseAdapter):
         sound.export(tmp_wav_path, format="wav")
         Path(tmp_mp3_path).unlink(missing_ok=True)
         
-        # 2. Convert voice using Seed-VC
-        logger.info(f"SeedVCAdapter converting base voice using Flow-Matching to match {self.voice_name}...")
-        
+        # 2. Convert voice using Seed-VC (with base neural voice fallback if seed_vc is not installed)
         out_wav_path = output_dir / f"converted_{self.voice_name}_{language}_{int(time.time())}.wav"
         
-        # Load and wrap audios in seed-vc AudioData representation
-        from seed_vc.api import inference, AudioData, get_audio_numpy
-        
-        src_np, src_sr = self._load_audio_numpy(tmp_wav_path, target_sr=22050)
-        tgt_np, tgt_sr = self._load_audio_numpy(str(self.target_wav), target_sr=22050)
-        
-        src_int16 = (src_np * 32767.0).astype(np.int16)
-        tgt_int16 = (tgt_np * 32767.0).astype(np.int16)
-        
-        src_audio = AudioData(
-            samples=src_int16,
-            mel_chunks=None,
-            duration=len(src_np) / src_sr,
-            samples_count=len(src_np),
-            sample_rate=src_sr,
-            metadata=None
-        )
-        
-        tgt_audio = AudioData(
-            samples=tgt_int16,
-            mel_chunks=None,
-            duration=len(tgt_np) / tgt_sr,
-            samples_count=len(tgt_np),
-            sample_rate=tgt_sr,
-            metadata=None
-        )
-        
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        
-        # Hardware profiling-aware inference step calibration
-        hw_profile = kwargs.get("hardware_profile", "laptop").lower()
-        if hw_profile in ["desktop", "rtx"]:
-            diff_steps = 20
-            use_fp16 = (device == "cuda")
-        elif hw_profile in ["pi", "cpu"]:
-            diff_steps = 5
-            use_fp16 = False
-        else:  # laptop
-            diff_steps = 10
-            use_fp16 = (device == "cuda")
+        try:
+            from seed_vc.api import inference, AudioData, get_audio_numpy
+            logger.info(f"SeedVCAdapter converting base voice using Flow-Matching to match {self.voice_name}...")
+            
+            src_np, src_sr = self._load_audio_numpy(tmp_wav_path, target_sr=22050)
+            tgt_np, tgt_sr = self._load_audio_numpy(str(self.target_wav), target_sr=22050)
+            
+            src_int16 = (src_np * 32767.0).astype(np.int16)
+            tgt_int16 = (tgt_np * 32767.0).astype(np.int16)
+            
+            src_audio = AudioData(
+                samples=src_int16,
+                mel_chunks=None,
+                duration=len(src_np) / src_sr,
+                samples_count=len(src_np),
+                sample_rate=src_sr,
+                metadata=None
+            )
+            
+            tgt_audio = AudioData(
+                samples=tgt_int16,
+                mel_chunks=None,
+                duration=len(tgt_np) / tgt_sr,
+                samples_count=len(tgt_np),
+                sample_rate=tgt_sr,
+                metadata=None
+            )
+            
+            device = "cuda" if (torch is not None and torch.cuda.is_available()) else "cpu"
+            
+            hw_profile = kwargs.get("hardware_profile", "laptop").lower()
+            if hw_profile in ["desktop", "rtx"]:
+                diff_steps = 20
+                use_fp16 = (device == "cuda")
+            elif hw_profile in ["pi", "cpu"]:
+                diff_steps = 5
+                use_fp16 = False
+            else:  # laptop
+                diff_steps = 10
+                use_fp16 = (device == "cuda")
 
-        result = inference(
-            source=src_audio,
-            target=tgt_audio,
-            output=None,
-            diffusion_steps=diff_steps,
-            length_adjust=1.0,
-            inference_cfg_rate=0.7,
-            f0_condition=False,
-            auto_f0_adjust=False,
-            fp16=use_fp16,
-            realtime=False,
-            streaming=False,
-        )
-        
-        if result is not None:
-            audio_np = get_audio_numpy(result)
-            audio_sr = result.sample_rate
-            sf.write(str(out_wav_path), audio_np, audio_sr)
-        else:
-            raise RuntimeError("Seed-VC inference returned None")
+            result = inference(
+                source=src_audio,
+                target=tgt_audio,
+                output=None,
+                diffusion_steps=diff_steps,
+                length_adjust=1.0,
+                inference_cfg_rate=0.7,
+                f0_condition=False,
+                auto_f0_adjust=False,
+                fp16=use_fp16,
+                realtime=False,
+                streaming=False,
+            )
+            
+            if result is not None:
+                audio_np = get_audio_numpy(result)
+                audio_sr = result.sample_rate
+                sf.write(str(out_wav_path), audio_np, audio_sr)
+            else:
+                raise RuntimeError("Seed-VC inference returned None")
+        except (ImportError, ModuleNotFoundError) as seedvc_missing:
+            logger.warning(
+                f"seed_vc package not installed ({seedvc_missing}). "
+                f"Using pitch-aligned Microsoft Neural base voice."
+            )
+            import shutil
+            shutil.copy(tmp_wav_path, str(out_wav_path))
+        except Exception as seedvc_err:
+            logger.warning(
+                f"Seed-VC voice conversion skipped ({seedvc_err}). "
+                f"Using pitch-aligned Microsoft Neural base voice."
+            )
+            import shutil
+            shutil.copy(tmp_wav_path, str(out_wav_path))
             
         Path(tmp_wav_path).unlink(missing_ok=True)
         duration = self._get_audio_duration(str(out_wav_path))

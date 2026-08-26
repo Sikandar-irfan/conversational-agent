@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev:frontend": "cd frontend && npm run dev:all",
-    "dev:agent": "python backend/agent.py dev",
+    "dev:agent": "uv run python backend/agent.py dev",
     "build:frontend": "cd frontend && npm run build"
   },
   "dependencies": {

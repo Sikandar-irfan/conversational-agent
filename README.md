@@ -28,11 +28,9 @@ conversational-agent/
 │   ├── vite.config.js
 │   └── package.json
 ├── docs/                     # Technical specifications & documentation
-│   ├── ai_rules.md
-│   ├── architecture.md
-│   ├── plan.md
-│   └── prd.md
 ├── .env.example              # Environment variable template
+├── .python-version           # Specifies Python 3.10 for uv
+├── pyproject.toml            # Project & uv dependency configuration
 ├── .gitignore                # Git exclusion rules
 ├── package.json              # Root script manager
 ├── requirements.txt          # Python dependencies
@@ -41,10 +39,11 @@ conversational-agent/
 
 ---
 
-## ⚡ Quick Start & Installation
+## ⚡ Quick Start & Installation with `uv` (Python 3.10)
 
-### 1. Prerequisites
-- **Python**: 3.10 or 3.11
+### 1. Environment Requirements
+- **Python**: 3.10 (managed automatically via `uv`)
+- **uv**: Modern Python package manager
 - **Node.js**: 18.x or higher
 - **LiveKit Cloud account**: API Key & Secret
 - **Groq API key**: For fast LLM inference
@@ -67,16 +66,21 @@ GROQ_API_KEY=your_groq_api_key
 SARVAM_API_KEY=your_sarvam_api_key
 ```
 
-### 3. Backend Setup
+### 3. Backend Setup with `uv` (Python 3.10)
 
-Install Python dependencies:
+Create a Python 3.10 virtual environment and install dependencies using `uv`:
+
 ```bash
-pip install -r requirements.txt
+# Pin and create Python 3.10 environment
+uv venv --python 3.10
+
+# Install dependencies into venv using uv
+uv pip install -r requirements.txt
 ```
 
-Run the backend LiveKit agent in development mode:
+Run the backend LiveKit agent:
 ```bash
-python backend/agent.py dev
+uv run python backend/agent.py dev
 ```
 
 ### 4. Frontend Setup
@@ -102,10 +106,9 @@ This repository is configured as **private** on GitHub under `Sikandar-irfan`.
 
 ### To Invite Collaborators:
 1. Open the repository on GitHub: `https://github.com/Sikandar-irfan/conversational-agent`
-2. Click **Settings** (top navigation tab).
-3. Select **Collaborators** under Access management.
-4. Click **Add people** and enter the GitHub username or email address of the person you want to invite.
-5. Alternatively, using GitHub CLI:
+2. Click **Settings** → **Collaborators**.
+3. Click **Add people** and enter the GitHub username or email address.
+4. Alternatively, using GitHub CLI:
    ```bash
    gh repo invite <username> --repo Sikandar-irfan/conversational-agent
    ```
