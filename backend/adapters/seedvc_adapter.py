@@ -269,6 +269,10 @@ class SeedVCAdapter(BaseAdapter):
             src_np, src_sr = self._load_audio_numpy(tmp_wav_path, target_sr=22050)
             tgt_np, tgt_sr = self._load_audio_numpy(str(self.target_wav), target_sr=22050)
             
+            # Trim target reference audio to first 10s for optimal prompt embedding
+            if len(tgt_np) > 10 * tgt_sr:
+                tgt_np = tgt_np[: int(10 * tgt_sr)]
+            
             src_int16 = (src_np * 32767.0).astype(np.int16)
             tgt_int16 = (tgt_np * 32767.0).astype(np.int16)
             
