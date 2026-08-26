@@ -131,6 +131,12 @@ class RoseTTSStream(BaseChunkedStream):
 
         wav_path = res["audio_path"]
         data, sr = sf.read(wav_path, dtype="int16")
+        target_sr = self.sample_rate
+        if sr != target_sr:
+            import soxr
+            data = soxr.resample(data, sr, target_sr).astype(np.int16)
+            sr = target_sr
+
         chunk_samples = int(sr * 0.02)
         try:
             for i in range(0, len(data), chunk_samples):
@@ -144,10 +150,7 @@ class RoseTTSStream(BaseChunkedStream):
                     )
                     if output_emitter is not None and hasattr(output_emitter, "push"):
                         try:
-                            if hasattr(tts, "SynthesizedAudio"):
-                                output_emitter.push(tts.SynthesizedAudio(frame=frame, request_id=""))
-                            else:
-                                output_emitter.push(frame)
+                            output_emitter.push(frame)
                         except Exception:
                             pass
 
