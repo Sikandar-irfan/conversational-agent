@@ -12,6 +12,8 @@ torchvision==0.21.0+cu124
 seed-vc==0.4.3
 munch==4.0.0
 einops==0.8.2
+flatten-dict==0.5.0
+julius==0.2.8
 huggingface-hub==1.28.0
 transformers==5.15.1
 safetensors==0.8.0
