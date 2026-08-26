@@ -159,7 +159,8 @@ class SeedVCAdapter(BaseAdapter):
                 logger.debug(f"XTTS-direct routing failed ({routing_e}), using Seed-VC path")
         # ----------------------------------------------------------------------
 
-        is_male = self.pitch_mean < 165.0
+        is_male = getattr(self, "gender", "").lower() == "male" or self.pitch_mean < 155.0
+        is_female = not is_male
         
         voice_mappings = {
             "en": ("en-IN-PrabhatNeural", "en-IN-NeerjaExpressiveNeural"),
@@ -168,15 +169,15 @@ class SeedVCAdapter(BaseAdapter):
             "kn": ("kn-IN-GaganNeural", "kn-IN-SapnaNeural"),
             "es": ("es-ES-AlvaroNeural", "es-ES-ElviraNeural"),
             "fr": ("fr-FR-HenriNeural", "fr-FR-DeniseNeural"),
-            "de": ("de-DE-ConradNeural", "de-DE-AmalaNeural"),
+            "de": ("de-DE-ConradNeural", "de-DE-KasparekNeural"),
             "it": ("it-IT-DiegoNeural", "it-IT-ElsaNeural"),
             "pt": ("pt-BR-AntonioNeural", "pt-BR-FranciscaNeural"),
             "pl": ("pl-PL-MarekNeural", "pl-PL-ZofiaNeural"),
             "tr": ("tr-TR-AhmetNeural", "tr-TR-EmelNeural"),
             "ru": ("ru-RU-DmitryNeural", "ru-RU-SvetlanaNeural"),
-            "nl": ("nl-NL-MaartenNeural", "nl-NL-ColetteNeural"),
+            "nl": ("nl-NL-MaartenNeural", "nl-NL-FennaNeural"),
             "cs": ("cs-CZ-AntoninNeural", "cs-CZ-VlastaNeural"),
-            "ar": ("ar-EG-ShakirNeural", "ar-EG-SalmaNeural"),
+            "ar": ("ar-EG-SalmaNeural", "ar-EG-ShakirNeural"),
             "zh-cn": ("zh-CN-YunxiNeural", "zh-CN-XiaoxiaoNeural"),
             "hu": ("hu-HU-TamasNeural", "hu-HU-NoemiNeural"),
             "ko": ("ko-KR-InJoonNeural", "ko-KR-SunHiNeural"),
@@ -209,42 +210,31 @@ class SeedVCAdapter(BaseAdapter):
         output_dir = Path(__file__).parent.parent / "output" / "audio" / "conversion"
         output_dir.mkdir(parents=True, exist_ok=True)
         
-        # 1. Synthesize base natural audio using edge-tts
-        tmp_mp3 = tempfile.NamedTemporaryFile(suffix="_base.mp3", delete=False)
-        tmp_mp3_path = tmp_mp3.name
-        tmp_mp3.close()
-        
+        # 1. Synthesize base natural audio using in-memory EdgeTTS stream with pitch alignment
+        pitch_offset = self.pitch_mean - 170.0 if is_female else self.pitch_mean - 130.0
+        pitch_str = f"{int(pitch_offset):+d}Hz" if abs(pitch_offset) >= 2 else "+0Hz"
+        rate_str = f"{int(rate_percent):+d}%" if abs(rate_percent) >= 5 else "+0%"
+
+        audio_bytes = bytearray()
         async def run_edge_tts():
             communicate = edge_tts.Communicate(
                 text,
                 base_voice,
-                pitch="+0Hz",
-                rate="+0%"
+                pitch=pitch_str,
+                rate=rate_str
             )
-            await communicate.save(tmp_mp3_path)
-            
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    audio_bytes.extend(chunk["data"])
+
         asyncio.run(run_edge_tts())
-        
-        # Convert MP3 base to high-fidelity 24kHz mono WAV using direct ffmpeg execution
-        tmp_wav = tempfile.NamedTemporaryFile(suffix="_base.wav", delete=False)
-        tmp_wav_path = tmp_wav.name
-        tmp_wav.close()
-        
-        try:
-            import subprocess
-            subprocess.run(
-                ["ffmpeg", "-y", "-i", tmp_mp3_path, "-ar", "24000", "-ac", "1", "-c:a", "pcm_s16le", tmp_wav_path],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                check=True
-            )
-        except Exception as e:
-            logger.warning(f"ffmpeg conversion fallback: {e}")
-            sound = pydub.AudioSegment.from_file(tmp_mp3_path)
-            sound = sound.set_frame_rate(24000).set_channels(1)
-            sound.export(tmp_wav_path, format="wav")
-            
-        Path(tmp_mp3_path).unlink(missing_ok=True)
+
+        # In-memory decoding to 22050Hz mono float32 numpy array
+        import io
+        sound = pydub.AudioSegment.from_file(io.BytesIO(audio_bytes), format="mp3")
+        sound = sound.set_frame_rate(22050).set_channels(1)
+        src_np = np.array(sound.get_array_of_samples(), dtype=np.float32) / 32768.0
+        src_sr = 22050
         
         # 2. Convert voice using Seed-VC (auto-installs seed_vc if missing)
         out_wav_path = output_dir / f"converted_{self.voice_name}_{language}_{int(time.time())}.wav"
@@ -266,12 +256,11 @@ class SeedVCAdapter(BaseAdapter):
 
             logger.info(f"SeedVCAdapter converting base voice using Flow-Matching to match {self.voice_name}...")
             
-            src_np, src_sr = self._load_audio_numpy(tmp_wav_path, target_sr=22050)
             tgt_np, tgt_sr = self._load_audio_numpy(str(self.target_wav), target_sr=22050)
             
-            # Trim target reference audio to first 10s for optimal prompt embedding
-            if len(tgt_np) > 10 * tgt_sr:
-                tgt_np = tgt_np[: int(10 * tgt_sr)]
+            # Trim target reference audio to first 8s for optimal prompt embedding & sub-500ms latency
+            if len(tgt_np) > 8 * tgt_sr:
+                tgt_np = tgt_np[: int(8 * tgt_sr)]
             
             src_int16 = (src_np * 32767.0).astype(np.int16)
             tgt_int16 = (tgt_np * 32767.0).astype(np.int16)
@@ -298,13 +287,13 @@ class SeedVCAdapter(BaseAdapter):
             
             hw_profile = kwargs.get("hardware_profile", "laptop").lower()
             if hw_profile in ["desktop", "rtx"]:
-                diff_steps = 20
+                diff_steps = 8
                 use_fp16 = (device == "cuda")
             elif hw_profile in ["pi", "cpu"]:
-                diff_steps = 5
+                diff_steps = 3
                 use_fp16 = False
             else:  # laptop
-                diff_steps = 10
+                diff_steps = 6
                 use_fp16 = (device == "cuda")
 
             result = inference(
@@ -317,7 +306,7 @@ class SeedVCAdapter(BaseAdapter):
                 f0_condition=False,
                 auto_f0_adjust=False,
                 fp16=use_fp16,
-                realtime=False,
+                realtime=True,
                 streaming=False,
             )
             
@@ -332,10 +321,8 @@ class SeedVCAdapter(BaseAdapter):
                 f"Seed-VC voice conversion skipped or auto-install failed ({seedvc_err}). "
                 f"Using pitch-aligned Microsoft Neural base voice."
             )
-            import shutil
-            shutil.copy(tmp_wav_path, str(out_wav_path))
+            sf.write(str(out_wav_path), src_np, src_sr)
             
-        Path(tmp_wav_path).unlink(missing_ok=True)
         duration = self._get_audio_duration(str(out_wav_path))
         
         with open(out_wav_path, "rb") as f:
