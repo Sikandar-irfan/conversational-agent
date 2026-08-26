@@ -149,6 +149,7 @@ class RoseTTSStream(BaseChunkedStream):
                                 self._event_ch.send_nowait(tts.SynthesizeEvent(frame=frame))
                         except Exception:
                             break
+                await asyncio.sleep(0.01)
         finally:
             if hasattr(self, "_event_ch") and self._event_ch and hasattr(self._event_ch, "close"):
                 try:

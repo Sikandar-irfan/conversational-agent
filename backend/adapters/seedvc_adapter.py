@@ -241,19 +241,16 @@ class SeedVCAdapter(BaseAdapter):
             try:
                 from seed_vc.api import inference, AudioData, get_audio_numpy
             except (ImportError, ModuleNotFoundError):
-                logger.info("seed_vc module not found. Attempting automatic installation via pip/uv...")
-                import subprocess
-                if sys.platform == "win32":
+                if not getattr(self, "_auto_install_attempted", False):
+                    self._auto_install_attempted = True
+                    logger.info("seed_vc module not found. Attempting automatic installation via uv...")
+                    import subprocess
                     subprocess.run(
-                        [sys.executable, "-m", "pip", "install", "webrtcvad-wheels"],
-                        check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                        ["uv", "pip", "install", "seed-vc", "--no-deps", "--python", sys.executable],
+                        check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE
                     )
-                subprocess.run(
-                    [sys.executable, "-m", "pip", "install", "seed-vc", "--no-deps"],
-                    check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-                )
                 from seed_vc.api import inference, AudioData, get_audio_numpy
-                logger.success("Successfully auto-installed and imported seed_vc module!")
+                logger.success("Successfully loaded seed_vc module!")
 
             logger.info(f"SeedVCAdapter converting base voice using Flow-Matching to match {self.voice_name}...")
             
