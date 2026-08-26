@@ -61,64 +61,7 @@ def detect_tts_language(text: str) -> str:
 # Dynamic Voice Pack Path
 VOICE_PACK_PATH = Path(os.getenv("VOICE_PACK_PATH", str(BASE_DIR / "voice_packs" / "bandhana_voice.vc")))
 
-from adapters.seedvc_adapter import SeedVCAdapter
-
-class RoseLiveKitTTS(tts.TTS):
-    def __init__(self, voice_pack_path: str = None, language: str = "kn"):
-        super().__init__(
-            capabilities=tts.TTSCapabilities(streaming=False),
-            sample_rate=22050,
-            num_channels=1
-        )
-        self.language = language
-        target_path = voice_pack_path or str(VOICE_PACK_PATH)
-        
-        self.adapter = SeedVCAdapter()
-        self.adapter._xtts_adapter = False
-        self.adapter.load_voice_package(target_path)
-
-    def synthesize(self, text: str) -> tts.ChunkedStream:
-        return RoseTTSStream(self.adapter, text, self.language)
-
-
-class RoseTTSStream(tts.ChunkedStream):
-    def __init__(self, adapter: SeedVCAdapter, text: str, language: str):
-        super().__init__()
-        self.adapter = adapter
-        self.text = text
-        self.language = language
-
-    async def _run(self) -> None:
-        try:
-            loop = asyncio.get_event_loop()
-            res = await loop.run_in_executor(
-                None,
-                lambda: self.adapter.synthesize(text=self.text, language=self.language)
-            )
-            
-            wav_path = res["audio_path"]
-            data, sr = sf.read(wav_path, dtype="int16")
-            
-            chunk_size = 2205 # 100ms audio chunks
-            for i in range(0, len(data), chunk_size):
-                chunk = data[i:i + chunk_size]
-                frame = tts.AudioFrame(
-                    data=chunk.tobytes(),
-                    sample_rate=sr,
-                    num_channels=1,
-                    samples_per_channel=len(chunk)
-                )
-                if hasattr(self, "_event_ch") and self._event_ch:
-                    if hasattr(tts, "SynthesizeEvent"):
-                        self._event_ch.send_nowait(tts.SynthesizeEvent(frame=frame))
-                    elif hasattr(tts, "SynthesizedAudio"):
-                        self._event_ch.send_nowait(tts.SynthesizedAudio(frame=frame, request_id=""))
-        finally:
-            if hasattr(self, "_event_ch") and self._event_ch and hasattr(self._event_ch, "close"):
-                try:
-                    self._event_ch.close()
-                except Exception:
-                    pass
+from livekit_tts import RoseLiveKitTTS, RoseTTSStream
 
 
 # ── Voice Agent ───────────────────────────────────────────────────────────────
