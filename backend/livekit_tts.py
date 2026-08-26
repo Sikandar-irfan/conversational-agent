@@ -96,9 +96,15 @@ class RoseTTSStream(BaseChunkedStream):
         }
         base_voice = base_voice_map.get(self.language, "kn-IN-SapnaNeural" if is_female else "kn-IN-GaganNeural")
 
+        if output_emitter is not None and hasattr(output_emitter, "start"):
+            try:
+                output_emitter.start(sample_rate=self.sample_rate, num_channels=1)
+            except Exception:
+                pass
+
         if hasattr(self, "_event_ch") and self._event_ch and hasattr(tts, "AudioFrame"):
             try:
-                # Emit 20ms silence frame (480 zeroed int16 samples at 24kHz) to immediately start AudioEmitter
+                # Emit 20ms silence frame (480 zeroed int16 samples at 24kHz) to immediately initialize stream
                 silence_bytes = bytes(480 * 2)
                 init_frame = tts.AudioFrame(
                     data=silence_bytes,
@@ -136,6 +142,15 @@ class RoseTTSStream(BaseChunkedStream):
                         num_channels=1,
                         samples_per_channel=len(chunk)
                     )
+                    if output_emitter is not None and hasattr(output_emitter, "push"):
+                        try:
+                            if hasattr(tts, "SynthesizedAudio"):
+                                output_emitter.push(tts.SynthesizedAudio(frame=frame, request_id=""))
+                            else:
+                                output_emitter.push(frame)
+                        except Exception:
+                            pass
+
                     if hasattr(self, "_event_ch") and self._event_ch:
                         try:
                             if hasattr(tts, "SynthesizedAudio"):
@@ -148,6 +163,9 @@ class RoseTTSStream(BaseChunkedStream):
         finally:
             if hasattr(self, "_event_ch") and self._event_ch and hasattr(self._event_ch, "close"):
                 try:
+                    self._event_ch.close()
+                except Exception:
+                    pass
                     self._event_ch.close()
                 except Exception:
                     pass
