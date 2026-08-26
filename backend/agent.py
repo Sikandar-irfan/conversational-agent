@@ -157,7 +157,9 @@ Before final confirmation, collect these details one by one in Kannada:
                 flush_signal=True
             ),
             llm=llm_instance,
-            tts=RoseLiveKitTTS(voice_pack_path=str(target_pack), language="kn")
+            tts=tts.StreamAdapter(
+                tts=RoseLiveKitTTS(voice_pack_path=str(target_pack), language="kn")
+            )
         )
 
 async def graceful_end(session, room, api):

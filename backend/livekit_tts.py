@@ -34,7 +34,7 @@ class RoseLiveKitTTS(BaseTTS):
 
         if BaseTTS is not object:
             super().__init__(
-                capabilities=tts.TTSCapabilities(streaming=True),
+                capabilities=tts.TTSCapabilities(streaming=False),
                 sample_rate=24000,
                 num_channels=1,
             )
