@@ -8,6 +8,10 @@ from pathlib import Path
 from collections.abc import AsyncIterable
 from typing import AsyncIterable
 from dotenv import load_dotenv
+
+# Suppress PyTorch torio internal FFmpeg DLL probe logs
+logging.getLogger("torio").setLevel(logging.ERROR)
+logging.getLogger("torio._extension.utils").setLevel(logging.ERROR)
 import soundfile as sf
 
 from livekit.agents import tts
