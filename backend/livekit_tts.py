@@ -96,6 +96,19 @@ class RoseTTSStream(BaseChunkedStream):
         }
         base_voice = base_voice_map.get(self.language, "kn-IN-SapnaNeural" if is_female else "kn-IN-GaganNeural")
 
+        if hasattr(self, "_event_ch") and self._event_ch and hasattr(tts, "AudioFrame"):
+            try:
+                init_frame = tts.AudioFrame(
+                    data=b"",
+                    sample_rate=self.sample_rate,
+                    num_channels=1,
+                    samples_per_channel=0
+                )
+                if hasattr(tts, "SynthesizedAudio"):
+                    self._event_ch.send_nowait(tts.SynthesizedAudio(frame=init_frame, request_id=""))
+            except Exception:
+                pass
+
         loop = asyncio.get_running_loop()
         res = await loop.run_in_executor(
             None,
