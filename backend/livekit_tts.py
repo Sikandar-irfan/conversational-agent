@@ -87,13 +87,14 @@ class RoseTTSStream(BaseChunkedStream):
         import soundfile as sf
         import numpy as np
 
+        is_female = "asika" in getattr(self.adapter, "voice_name", "").lower() or getattr(self.adapter, "pitch_mean", 0) >= 155.0
         base_voice_map = {
-            "kn": "kn-IN-GaganNeural",
-            "hi": "hi-IN-MadhurNeural",
-            "ta": "ta-IN-ValluvarNeural",
-            "en": "en-IN-PrabhatNeural"
+            "kn": "kn-IN-SapnaNeural" if is_female else "kn-IN-GaganNeural",
+            "hi": "hi-IN-SwaraNeural" if is_female else "hi-IN-MadhurNeural",
+            "ta": "ta-IN-PallaviNeural" if is_female else "ta-IN-ValluvarNeural",
+            "en": "en-IN-NeerjaExpressiveNeural" if is_female else "en-IN-PrabhatNeural"
         }
-        base_voice = base_voice_map.get(self.language, "kn-IN-GaganNeural")
+        base_voice = base_voice_map.get(self.language, "kn-IN-SapnaNeural" if is_female else "kn-IN-GaganNeural")
 
         loop = asyncio.get_running_loop()
         res = await loop.run_in_executor(
