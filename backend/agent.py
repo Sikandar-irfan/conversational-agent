@@ -202,20 +202,36 @@ async def entrypoint(ctx: JobContext):
 
     @session.on("user_speech_committed")
     def on_user_speech(msg):
-        text = getattr(msg, "content", "") or ""
-        if not isinstance(text, str):
-            text = str(text)
+        text = ""
+        if isinstance(msg, str):
+            text = msg
+        elif hasattr(msg, "user_transcript"):
+            text = str(msg.user_transcript)
+        elif hasattr(msg, "transcript"):
+            text = str(msg.transcript)
+        elif hasattr(msg, "content"):
+            text = str(msg.content)
+        else:
+            text = str(msg)
+
         text_lower = text.lower()
-        goodbye_words = ["bye", "goodbye", "disconnect", "cut call", "end call", "ಬೈ", "ಸಾಕು ಬೈ", "ಧನ್ಯವಾದಗಳು ಬೈ", "ಸರಿ ಬೈ"]
+        goodbye_words = ["bye", "goodbye", "disconnect", "cut call", "end call", "ಬೈ", "ಸಾಕು ಬೈ", "ಧನ್ಯವಾದಗಳು ಬೈ", "ಸರಿ ಬೈ", "ಆಯ್ತು ಬೈ"]
         if any(w in text_lower for w in goodbye_words):
-            logger.info(f"Detected goodbye in user transcript: '{text}'. Hanging up call after speech...")
+            logger.info(f"Detected goodbye in user transcript ('{text}'). Deleting room after speech...")
             async def auto_hangup():
                 await asyncio.sleep(3.5)
                 try:
-                    await ctx.room.disconnect()
-                    logger.info(f"Room '{ctx.room.name}' disconnected automatically after user goodbye.")
+                    from livekit import api
+                    lk_api = api.LiveKitAPI()
+                    await lk_api.room.delete_room(api.DeleteRoomRequest(room=ctx.room.name))
+                    await lk_api.aclose()
+                    logger.info(f"Room '{ctx.room.name}' deleted via LiveKit API after user goodbye.")
                 except Exception as e:
-                    logger.warning(f"Failed to auto-disconnect room: {e}")
+                    logger.warning(f"Failed to delete room via API ({e}), disconnecting ctx.room...")
+                    try:
+                        await ctx.room.disconnect()
+                    except Exception:
+                        pass
             asyncio.create_task(auto_hangup())
 
     await session.start(
