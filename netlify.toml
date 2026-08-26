@@ -1,0 +1,20 @@
+[build]
+  base    = "my-agent-ui--"          # folder where package.json lives
+  command = "npm run build"           # build command
+  publish = "dist"                   # output folder Netlify will serve
+
+[functions]
+  directory = "netlify/functions"    # where our token.js lives
+  node_bundler = "esbuild"
+
+# Redirect /api/token → Netlify function (keeps same URL the React app already uses)
+[[redirects]]
+  from   = "/api/token"
+  to     = "/.netlify/functions/token"
+  status = 200
+
+# SPA fallback — React Router support
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200

@@ -1,0 +1,12 @@
+{
+  "pitch_mean": 125.0,
+  "pitch_variance": 400.0,
+  "pitch_range": 120.0,
+  "pitch_min": 80.0,
+  "pitch_max": 200.0,
+  "speaking_rate": 3.0,
+  "gender": "male",
+  "energy_mean": 0.06162075325846672,
+  "energy_variance": 0.0005344703677110374,
+  "duration_seconds": 47.946875
+}

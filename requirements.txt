@@ -1,0 +1,49 @@
+# ──────────────────────────────────────────────────────────────
+# ROSE Voice Tool — Requirements
+# ──────────────────────────────────────────────────────────────
+# Install order:
+#   1. pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu118
+#   2. pip install TTS
+#   3. pip install -r requirements.txt
+# ──────────────────────────────────────────────────────────────
+
+# ── Audio I/O ─────────────────────────────────────────────────────────────────
+soundfile                # Audio read/write
+sounddevice              # Real-time audio playback
+librosa                  # Audio processing
+pydub                    # Audio format conversion (MP3→WAV)
+
+# ── Emotion Analysis ──────────────────────────────────────────────────────────
+textblob                 # Basic sentiment analysis
+
+# ── API Server ────────────────────────────────────────────────────────────────
+fastapi
+uvicorn[standard]
+python-multipart
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+python-dotenv
+loguru
+numpy<2.4
+pydantic
+
+# ── Voice Clone Research Features ─────────────────────────────────────────────
+safetensors
+speechbrain
+pyloudnorm
+# CRITICAL: transformers must stay < 4.57.
+# TTS.tts.models.xtts imports BeamSearchScorer which was removed in 4.57+.
+# seed-vc==0.4.3 will try to upgrade this to v5 -- always install with --no-deps.
+transformers>=4.40,<4.57
+
+# ── Optional: Seed-VC evaluation (install separately, do NOT let it resolve deps)
+# uv pip install seed-vc==0.4.3 --no-deps
+# seed-vc (unpinned, --no-deps required)
+
+
+livekit-agents[codecs]>=1.5.0
+livekit-plugins-openai>=0.10.0
+livekit-plugins-sarvam>=0.1.0
+python-dotenv>=1.0.0
+aiohttp>=3.9.0
+dotenv

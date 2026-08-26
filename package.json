@@ -1,0 +1,13 @@
+{
+  "name": "conversational-agent",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "cd frontend && npm run dev:all",
+    "dev:agent": "python backend/agent.py dev",
+    "build:frontend": "cd frontend && npm run build"
+  },
+  "dependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
