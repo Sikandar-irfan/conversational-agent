@@ -142,10 +142,13 @@ class RoseTTSStream(BaseChunkedStream):
                         samples_per_channel=len(chunk)
                     )
                     if hasattr(self, "_event_ch") and self._event_ch:
-                        if hasattr(tts, "SynthesizeEvent"):
-                            self._event_ch.send_nowait(tts.SynthesizeEvent(frame=frame))
-                        elif hasattr(tts, "SynthesizedAudio"):
-                            self._event_ch.send_nowait(tts.SynthesizedAudio(frame=frame, request_id=""))
+                        try:
+                            if hasattr(tts, "SynthesizedAudio"):
+                                self._event_ch.send_nowait(tts.SynthesizedAudio(frame=frame, request_id=""))
+                            elif hasattr(tts, "SynthesizeEvent"):
+                                self._event_ch.send_nowait(tts.SynthesizeEvent(frame=frame))
+                        except Exception:
+                            break
         finally:
             if hasattr(self, "_event_ch") and self._event_ch and hasattr(self._event_ch, "close"):
                 try:
