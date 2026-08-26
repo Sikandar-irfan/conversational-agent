@@ -2,43 +2,44 @@
 # Conversational AI Voice Agent — Requirements
 # ──────────────────────────────────────────────────────────────
 
-# ── PyTorch & CUDA 12.4 ────────────────────────────────────────────────────────
+# ── PyTorch & CUDA 12.4 (NVIDIA GPU Acceleration) ─────────────
 --extra-index-url https://download.pytorch.org/whl/cu124
-torch
-torchvision
-torchaudio
+torch==2.6.0+cu124
+torchaudio==2.6.0+cu124
+torchvision==0.21.0+cu124
 
-# ── Audio I/O & DSP ───────────────────────────────────────────────────────────
-soundfile                # Audio read/write
-sounddevice              # Real-time audio playback
-librosa                  # Audio processing & feature extraction
-pydub                    # Audio format conversion (MP3→WAV)
-soxr                     # High-quality audio resampling
-scipy                    # Signal processing
-numba                    # JIT acceleration for audio DSP
+# ── Voice Clone & Seed-VC Engine ──────────────────────────────
+seed-vc==0.4.3
+munch==4.0.0
+huggingface-hub==1.28.0
+transformers==5.15.1
+safetensors==0.8.0
 
-# ── API & Network ─────────────────────────────────────────────────────────────
+# ── Audio Processing & DSP ────────────────────────────────────
+soundfile==0.14.0
+sounddevice==0.5.6
+librosa==0.11.0
+soxr==1.1.0
+scipy==1.15.3
+numba==0.67.0
+pydub==0.25.1
+edge-tts==7.2.8
+
+# ── LiveKit Framework ─────────────────────────────────────────
+livekit==1.1.14
+livekit-agents==1.7.0
+livekit-api==1.2.0
+livekit-plugins-openai==1.7.0
+livekit-plugins-sarvam==1.7.0
+
+# ── LLM, API & Network Utilities ──────────────────────────────
+openai==2.54.0
+python-dotenv==1.2.3
+loguru==0.7.3
+numpy==2.2.6
+pydantic==2.13.4
 fastapi
 uvicorn[standard]
 python-multipart
 requests
 aiohttp
-
-# ── Utilities ─────────────────────────────────────────────────────────────────
-python-dotenv
-loguru
-numpy
-pydantic
-munch                    # Config dict parsing for Seed-VC models
-
-# ── Voice Clone & Seed-VC ─────────────────────────────────────────────────────
-safetensors
-speechbrain
-pyloudnorm
-transformers>=4.40,<4.57
-seed-vc                  # Seed-VC voice conversion engine
-
-# ── LiveKit Framework ─────────────────────────────────────────────────────────
-livekit-agents[codecs]>=1.7.0
-livekit-plugins-openai>=0.10.0
-livekit-plugins-sarvam>=0.1.0
