@@ -91,6 +91,7 @@ function AgentRoom({ onDisconnect, selectedAgent }) {
 // ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [token, setToken] = useState(null);
+  const [serverUrl, setServerUrl] = useState(LIVEKIT_URL);
   const [loading, setLoading] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState(AGENTS[0]); // default: Shubh
 
@@ -104,6 +105,9 @@ export default function App() {
       });
       const res = await fetch('/api/token?' + params);
       const data = await res.json();
+      if (data.url) {
+        setServerUrl(data.url);
+      }
       setToken(data.token);
     } catch (e) {
       alert('❌ Could not connect.\n\nMake sure:\n1. node token_server.cjs is running\n2. python agent.py dev is running');
@@ -127,7 +131,7 @@ export default function App() {
       {token ? (
         <LiveKitRoom
           token={token}
-          serverUrl={LIVEKIT_URL}
+          serverUrl={serverUrl}
           connect={true}
           audio={true}
           video={false}
