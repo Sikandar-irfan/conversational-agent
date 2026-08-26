@@ -159,11 +159,3 @@ class RoseTTSStream(BaseChunkedStream):
                 await asyncio.sleep(0.005)
         except Exception as e:
             logger.error(f"Error emitting audio frames: {e}")
-        finally:
-            if hasattr(self, "_event_ch") and self._event_ch and hasattr(self._event_ch, "close"):
-                try:
-                    self._event_ch.close()
-                except Exception:
-                    self._event_ch.close()
-                except Exception:
-                    pass
