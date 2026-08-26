@@ -218,19 +218,20 @@ class SeedVCAdapter(BaseAdapter):
             communicate = edge_tts.Communicate(
                 text,
                 base_voice,
-                pitch=pitch_str,
-                rate=rate_str
+                pitch="+0Hz",
+                rate="+0%"
             )
             await communicate.save(tmp_mp3_path)
             
         asyncio.run(run_edge_tts())
         
-        # Convert MP3 base to WAV
+        # Convert MP3 base to high-fidelity 24kHz mono WAV
         tmp_wav = tempfile.NamedTemporaryFile(suffix="_base.wav", delete=False)
         tmp_wav_path = tmp_wav.name
         tmp_wav.close()
         
         sound = pydub.AudioSegment.from_file(tmp_mp3_path)
+        sound = sound.set_frame_rate(24000).set_channels(1)
         sound.export(tmp_wav_path, format="wav")
         Path(tmp_mp3_path).unlink(missing_ok=True)
         

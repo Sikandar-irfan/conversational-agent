@@ -109,7 +109,7 @@ class RoseTTSStream(BaseChunkedStream):
 
         wav_path = res["audio_path"]
         data, sr = sf.read(wav_path, dtype="int16")
-        chunk_samples = int(sr * 0.10)
+        chunk_samples = int(sr * 0.05)
 
         if output_emitter is not None:
             if not getattr(output_emitter, "_started", False):
@@ -149,7 +149,7 @@ class RoseTTSStream(BaseChunkedStream):
                                 self._event_ch.send_nowait(tts.SynthesizeEvent(frame=frame))
                         except Exception:
                             break
-                await asyncio.sleep(0.01)
+                await asyncio.sleep(0.045)
         finally:
             if hasattr(self, "_event_ch") and self._event_ch and hasattr(self._event_ch, "close"):
                 try:
