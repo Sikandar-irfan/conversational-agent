@@ -34,13 +34,13 @@ class RoseLiveKitTTS(BaseTTS):
 
         if BaseTTS is not object:
             super().__init__(
-                capabilities=tts.TTSCapabilities(streaming=False),
-                sample_rate=22050,
+                capabilities=tts.TTSCapabilities(streaming=True),
+                sample_rate=24000,
                 num_channels=1,
             )
 
         self.language = language
-        self._sample_rate = 22050
+        self._sample_rate = 24000
         self.voice_pack_path = voice_pack_path
         
         print(f"[LiveKit TTS] Initializing Dr. Vishnuvardhan Voice Package: {self.voice_pack_path}")
@@ -111,31 +111,10 @@ class RoseTTSStream(BaseChunkedStream):
         wav_path = res["audio_path"]
         data, sr = sf.read(wav_path, dtype="int16")
         chunk_samples = int(sr * 0.02)
-
-        if output_emitter is not None:
-            if not getattr(output_emitter, "_started", False):
-                if hasattr(output_emitter, "initialize"):
-                    output_emitter.initialize(
-                        request_id="dr_vishnuvardhan_tts",
-                        sample_rate=sr,
-                        num_channels=1,
-                        mime_type="audio/pcm",
-                    )
-                elif hasattr(output_emitter, "start"):
-                    output_emitter.start(
-                        request_id="dr_vishnuvardhan_tts",
-                        sample_rate=sr,
-                        num_channels=1,
-                        stream=False,
-                    )
-
         try:
             for i in range(0, len(data), chunk_samples):
                 chunk = data[i : i + chunk_samples]
-                if output_emitter is not None:
-                    if hasattr(output_emitter, "push"):
-                        output_emitter.push(chunk.tobytes())
-                elif hasattr(tts, "AudioFrame"):
+                if hasattr(tts, "AudioFrame"):
                     frame = tts.AudioFrame(
                         data=chunk.tobytes(),
                         sample_rate=sr,
@@ -150,7 +129,7 @@ class RoseTTSStream(BaseChunkedStream):
                                 self._event_ch.send_nowait(tts.SynthesizeEvent(frame=frame))
                         except Exception:
                             break
-                await asyncio.sleep(0)
+                await asyncio.sleep(0.005)
         finally:
             if hasattr(self, "_event_ch") and self._event_ch and hasattr(self._event_ch, "close"):
                 try:
