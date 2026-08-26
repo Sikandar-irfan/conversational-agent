@@ -2,11 +2,20 @@
 # Conversational AI Voice Agent — Requirements
 # ──────────────────────────────────────────────────────────────
 
-# ── Audio I/O ─────────────────────────────────────────────────────────────────
+# ── PyTorch & CUDA 12.4 ────────────────────────────────────────────────────────
+--extra-index-url https://download.pytorch.org/whl/cu124
+torch
+torchvision
+torchaudio
+
+# ── Audio I/O & DSP ───────────────────────────────────────────────────────────
 soundfile                # Audio read/write
 sounddevice              # Real-time audio playback
-librosa                  # Audio processing
+librosa                  # Audio processing & feature extraction
 pydub                    # Audio format conversion (MP3→WAV)
+soxr                     # High-quality audio resampling
+scipy                    # Signal processing
+numba                    # JIT acceleration for audio DSP
 
 # ── API & Network ─────────────────────────────────────────────────────────────
 fastapi
@@ -20,6 +29,7 @@ python-dotenv
 loguru
 numpy
 pydantic
+munch                    # Config dict parsing for Seed-VC models
 
 # ── Voice Clone & Seed-VC ─────────────────────────────────────────────────────
 safetensors
@@ -29,6 +39,6 @@ transformers>=4.40,<4.57
 seed-vc                  # Seed-VC voice conversion engine
 
 # ── LiveKit Framework ─────────────────────────────────────────────────────────
-livekit-agents[codecs]>=1.5.0
+livekit-agents[codecs]>=1.7.0
 livekit-plugins-openai>=0.10.0
 livekit-plugins-sarvam>=0.1.0
