@@ -198,8 +198,8 @@ async def entrypoint(ctx: JobContext):
             turn_detection=inference.TurnDetector(),
             endpointing={
                 "mode": "fixed",
-                "min_delay": 0.8,
-                "max_delay": 3.0,
+                "min_delay": 2.0,
+                "max_delay": 5.0,
             },
             preemptive_generation={
                 "preemptive_tts": True,
