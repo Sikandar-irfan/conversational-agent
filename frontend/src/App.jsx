@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   LiveKitRoom,
   useVoiceAssistant,
@@ -22,6 +22,12 @@ const AGENTS = [
 function AgentRoom({ onDisconnect, selectedAgent }) {
   const room = useRoomContext();
   const { state, audioTrack, agentTranscriptions } = useVoiceAssistant();
+
+  useEffect(() => {
+    if (room) {
+      room.startAudio().catch((err) => console.warn('Autoplay startAudio error:', err));
+    }
+  }, [room]);
 
   const speaking = state === 'speaking';
   const lastLine = agentTranscriptions?.at(-1)?.segment ?? '';
