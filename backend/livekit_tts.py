@@ -96,15 +96,27 @@ class RoseTTSStream(BaseChunkedStream):
         }
         base_voice = base_voice_map.get(self.language, "kn-IN-SapnaNeural" if is_female else "kn-IN-GaganNeural")
 
-        if output_emitter is not None and hasattr(output_emitter, "start"):
-            try:
-                output_emitter.start(sample_rate=self.sample_rate, num_channels=1)
-            except Exception:
-                pass
+        if output_emitter is not None:
+            if hasattr(output_emitter, "start"):
+                try:
+                    output_emitter.start(sample_rate=self.sample_rate, num_channels=1)
+                except Exception:
+                    pass
+            if hasattr(output_emitter, "push") and hasattr(tts, "AudioFrame"):
+                try:
+                    silence_bytes = bytes(480 * 2)
+                    init_frame = tts.AudioFrame(
+                        data=silence_bytes,
+                        sample_rate=self.sample_rate,
+                        num_channels=1,
+                        samples_per_channel=480
+                    )
+                    output_emitter.push(init_frame)
+                except Exception:
+                    pass
 
         if hasattr(self, "_event_ch") and self._event_ch and hasattr(tts, "AudioFrame"):
             try:
-                # Emit 20ms silence frame (480 zeroed int16 samples at 24kHz) to immediately initialize stream
                 silence_bytes = bytes(480 * 2)
                 init_frame = tts.AudioFrame(
                     data=silence_bytes,
