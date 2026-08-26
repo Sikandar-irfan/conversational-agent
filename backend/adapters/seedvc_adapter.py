@@ -225,14 +225,25 @@ class SeedVCAdapter(BaseAdapter):
             
         asyncio.run(run_edge_tts())
         
-        # Convert MP3 base to high-fidelity 24kHz mono WAV
+        # Convert MP3 base to high-fidelity 24kHz mono WAV using direct ffmpeg execution
         tmp_wav = tempfile.NamedTemporaryFile(suffix="_base.wav", delete=False)
         tmp_wav_path = tmp_wav.name
         tmp_wav.close()
         
-        sound = pydub.AudioSegment.from_file(tmp_mp3_path)
-        sound = sound.set_frame_rate(24000).set_channels(1)
-        sound.export(tmp_wav_path, format="wav")
+        try:
+            import subprocess
+            subprocess.run(
+                ["ffmpeg", "-y", "-i", tmp_mp3_path, "-ar", "24000", "-ac", "1", "-c:a", "pcm_s16le", tmp_wav_path],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=True
+            )
+        except Exception as e:
+            logger.warning(f"ffmpeg conversion fallback: {e}")
+            sound = pydub.AudioSegment.from_file(tmp_mp3_path)
+            sound = sound.set_frame_rate(24000).set_channels(1)
+            sound.export(tmp_wav_path, format="wav")
+            
         Path(tmp_mp3_path).unlink(missing_ok=True)
         
         # 2. Convert voice using Seed-VC (auto-installs seed_vc if missing)
