@@ -18,6 +18,12 @@ from livekit.agents.voice.agent import ModelSettings
 from livekit.agents.beta.tools import EndCallTool
 from livekit.agents import TurnHandlingOptions, inference
 
+if sys.platform == "win32":
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 # Determine project base directory dynamically
 BASE_DIR = Path(__file__).parent.resolve()
 if str(BASE_DIR) not in sys.path:
