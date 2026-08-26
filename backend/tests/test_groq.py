@@ -10,7 +10,7 @@ if sys.platform == "win32":
     if hasattr(sys.stderr, "reconfigure"):
         sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-BASE_DIR = Path(__file__).parent.resolve()
+BASE_DIR = Path(__file__).parent.parent.resolve()
 load_dotenv(dotenv_path=BASE_DIR / ".env")
 load_dotenv(dotenv_path=BASE_DIR.parent / ".env")
 
