@@ -210,18 +210,14 @@ class SeedVCAdapter(BaseAdapter):
         output_dir = Path(__file__).parent.parent / "output" / "audio" / "conversion"
         output_dir.mkdir(parents=True, exist_ok=True)
         
-        # 1. Synthesize base natural audio using in-memory EdgeTTS stream with pitch alignment
-        pitch_offset = self.pitch_mean - 170.0 if is_female else self.pitch_mean - 130.0
-        pitch_str = f"{int(pitch_offset):+d}Hz" if abs(pitch_offset) >= 2 else "+0Hz"
-        rate_str = f"{int(rate_percent):+d}%" if abs(rate_percent) >= 5 else "+0%"
-
+        # 1. Synthesize base natural audio using in-memory EdgeTTS stream (unwarped +0Hz for crystal-clear natural quality)
         audio_bytes = bytearray()
         async def run_edge_tts():
             communicate = edge_tts.Communicate(
                 text,
                 base_voice,
-                pitch=pitch_str,
-                rate=rate_str
+                pitch="+0Hz",
+                rate="+0%"
             )
             async for chunk in communicate.stream():
                 if chunk["type"] == "audio":
