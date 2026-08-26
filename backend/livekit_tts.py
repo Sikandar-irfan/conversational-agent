@@ -86,6 +86,8 @@ class RoseTTSStream(BaseChunkedStream):
     async def _run(self, output_emitter=None) -> None:
         import soundfile as sf
         import numpy as np
+        import time
+        import uuid
 
         is_female = "asika" in getattr(self.adapter, "voice_name", "").lower() or getattr(self.adapter, "pitch_mean", 0) >= 155.0
         base_voice_map = {
@@ -96,38 +98,19 @@ class RoseTTSStream(BaseChunkedStream):
         }
         base_voice = base_voice_map.get(self.language, "kn-IN-SapnaNeural" if is_female else "kn-IN-GaganNeural")
 
+        req_id = f"req_{uuid.uuid4().hex[:8]}"
         if output_emitter is not None:
-            if hasattr(output_emitter, "start"):
+            if hasattr(output_emitter, "initialize"):
                 try:
-                    output_emitter.start(sample_rate=self.sample_rate, num_channels=1)
-                except Exception:
-                    pass
-            if hasattr(output_emitter, "push") and hasattr(tts, "AudioFrame"):
-                try:
-                    silence_bytes = bytes(480 * 2)
-                    init_frame = tts.AudioFrame(
-                        data=silence_bytes,
+                    output_emitter.initialize(
+                        request_id=req_id,
                         sample_rate=self.sample_rate,
                         num_channels=1,
-                        samples_per_channel=480
+                        mime_type="audio/pcm",
+                        stream=False
                     )
-                    output_emitter.push(init_frame)
-                except Exception:
-                    pass
-
-        if hasattr(self, "_event_ch") and self._event_ch and hasattr(tts, "AudioFrame"):
-            try:
-                silence_bytes = bytes(480 * 2)
-                init_frame = tts.AudioFrame(
-                    data=silence_bytes,
-                    sample_rate=self.sample_rate,
-                    num_channels=1,
-                    samples_per_channel=480
-                )
-                if hasattr(tts, "SynthesizedAudio"):
-                    self._event_ch.send_nowait(tts.SynthesizedAudio(frame=init_frame, request_id=""))
-            except Exception:
-                pass
+                except Exception as e:
+                    logger.warning(f"output_emitter.initialize note: {e}")
 
         loop = asyncio.get_running_loop()
         res = await loop.run_in_executor(
@@ -153,34 +136,34 @@ class RoseTTSStream(BaseChunkedStream):
         try:
             for i in range(0, len(data), chunk_samples):
                 chunk = data[i : i + chunk_samples]
-                if hasattr(tts, "AudioFrame"):
-                    frame = tts.AudioFrame(
-                        data=chunk.tobytes(),
-                        sample_rate=sr,
-                        num_channels=1,
-                        samples_per_channel=len(chunk)
-                    )
-                    if output_emitter is not None and hasattr(output_emitter, "push"):
-                        try:
-                            output_emitter.push(frame)
-                        except Exception:
-                            pass
+                chunk_bytes = chunk.tobytes()
 
-                    if hasattr(self, "_event_ch") and self._event_ch:
-                        try:
-                            if hasattr(tts, "SynthesizedAudio"):
-                                self._event_ch.send_nowait(tts.SynthesizedAudio(frame=frame, request_id=""))
-                            elif hasattr(tts, "SynthesizeEvent"):
-                                self._event_ch.send_nowait(tts.SynthesizeEvent(frame=frame))
-                        except Exception:
-                            break
+                if output_emitter is not None and hasattr(output_emitter, "push"):
+                    try:
+                        output_emitter.push(chunk_bytes)
+                    except Exception:
+                        pass
+
+                if hasattr(self, "_event_ch") and self._event_ch and hasattr(tts, "AudioFrame"):
+                    try:
+                        frame = tts.AudioFrame(
+                            data=chunk_bytes,
+                            sample_rate=sr,
+                            num_channels=1,
+                            samples_per_channel=len(chunk)
+                        )
+                        if hasattr(tts, "SynthesizedAudio"):
+                            self._event_ch.send_nowait(tts.SynthesizedAudio(frame=frame, request_id=req_id))
+                    except Exception:
+                        pass
                 await asyncio.sleep(0.005)
+        except Exception as e:
+            logger.error(f"Error emitting audio frames: {e}")
         finally:
             if hasattr(self, "_event_ch") and self._event_ch and hasattr(self._event_ch, "close"):
                 try:
                     self._event_ch.close()
                 except Exception:
-                    pass
                     self._event_ch.close()
                 except Exception:
                     pass
