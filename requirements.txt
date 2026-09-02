@@ -4,7 +4,7 @@
 
 # ── PyTorch & CUDA 12.4 (GPU Acceleration) ────────────────────
 --extra-index-url https://download.pytorch.org/whl/cu124
-torch==2.6.0+cu124
+torch==2.13.0
 torchaudio==2.6.0+cu124
 torchvision==0.21.0+cu124
 
@@ -15,7 +15,7 @@ einops==0.8.2
 flatten-dict==0.5.0
 julius==0.2.8
 huggingface-hub==0.36.2
-transformers==4.46.3
+transformers==5.10.1
 tokenizers==0.20.3
 safetensors==0.8.0
 
